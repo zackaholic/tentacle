@@ -1,19 +1,13 @@
-const trim5 = (val) => Number.parseFloat(val).toFixed(5);
+const trim = (precision) => {
+  return (val) => {
+    return Number.parseFloat(val).toFixed(precision);
+  }
+}
 
 const arc = {
-  start: {
-    x: 0,
-    y: 0,  
-  },
-  end: {
-    x: 4,
-    y: 0  
-  },
-  center: {
-    x: 2,
-    y: 0
-  },
-  dir: 1
+  toGcode: function() {
+    return gcodeArc(this, trim(5));
+  }
 }
 
 const magnitude = (p1, p2) => {
@@ -81,38 +75,57 @@ const determineDirection = (arc, radius) => {
   return radius < 0 ? arc.dir : arc.dir * -1;
 }
 
-
-
 const gcodeArc = (arc, trim) => {
   let gArc = '';
   if (arc.dir === 1) gArc += 'G2';
   if (arc.dir === -1) gArc += 'G3';
 
   if (typeof trim === 'function') {
-    gArc += ' X' + trim(arc.end.x);
-    gArc += ' Y' + trim(arc.end.y);
-    gArc += ' I' + trim(arc.center.x - arc.start.x);
-    gArc += ' J' + trim(arc.center.y - arc.start.y);    
+    gArc += 'X' + trim(arc.end.x);
+    gArc += 'Y' + trim(arc.end.y);
+    gArc += 'I' + trim(arc.center.x - arc.start.x);
+    gArc += 'J' + trim(arc.center.y - arc.start.y);    
   } else {
-    gArc += ' X' + arc.end.x;
-    gArc += ' Y' + arc.end.y;
-    gArc += ' I' + (arc.center.x - arc.start.x);
-    gArc += ' J' + (arc.center.y - arc.start.y);
+    gArc += 'X' + arc.end.x;
+    gArc += 'Y' + arc.end.y;
+    gArc += 'I' + (arc.center.x - arc.start.x);
+    gArc += 'J' + (arc.center.y - arc.start.y);
   } 
   return gArc;
 }
 
-const tangentArc = (arc, radius) => {
-  const tArc = {};
+const tangentArc = (arc, radius, angleCalc) => {
+  const tArc = Object.create(arc);
   tArc.start = arc.end;
   tArc.center = extend(arc.center, arc.end, radius).p2;
-  tArc.end = pointOnCircle(tArc.center, radius, randomAngle());
+  tArc.end = pointOnCircle(tArc.center, radius, angleCalc());
   tArc.dir = determineDirection(arc, radius);
-  return tArc;
+  return tArc;  
 }
 
-let arc1 = arc;
-let arc2;
+exports.tangentArcRand = (arc, radius) => {
+  return tangentArc(arc, radius, randomAngle);
+}
+
+exports.tangentArcTowards = (arc, radius) => {
+  return tangentArc(arc, radius, tangentAngle);
+}
+
+exports.firstArc = () => {
+  const fArc = Object.create(arc);
+  fArc.start = {x: 0, y: 0};
+  fArc.end = {x: 2, y: 0};
+  fArc.center = {x: 1, y: 0};
+  fArc.dir = 1;
+  return fArc;
+}
+
+exports.arcHeader = () => {
+  return 'G17\nG20\n';
+}
+
+// let arc1 = arc;
+// let arc2;
 //  console.log('F700\nG17\nG20');
 //  console.log(gcodeArc(arc1));
 // //console.log(arc1);
