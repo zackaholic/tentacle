@@ -1,33 +1,35 @@
 const SerialPort = require('serialport');
-
+const Readline = SerialPort.parsers.Readline;
 const port = new SerialPort('/dev/tty.usbserial-FTELMX61', {
   baudRate: 115200
 });
 
-const header = 'F10000\nG0X0Y0\n';  //turn into homing or reset later?
+const parser = port.pipe(new Readline());
 
 port.on('error', err => {
   console.log('Error: ', err.message);
 });
 
 port.on('open', () => {
-  //startup sequence here? Homing etc??
-  //Say hi to Grbl- get response to kick off command streaming
-  port.write(header);
+  //do nothing
 });
 
-const receiveResponse = (response) => {
-  response = response.toString('utf8');
-  console.log('Got: ', response);
-  if (response.includes('ok')) {
-      grbl.use();
-      fillGrblBuffer();
+const parseGrbl = (res) => {
+  console.log('Got: ', res);
+  res = res.toString('utf8');
+//TODO: why does only includes() work for this comparison???  
+  if (res.includes('ok')) {
+    grbl.use();
+    fillGrblBuffer();    
   } else {
-    //handle various error conditions
+    if (res.includes('error')) {
+      //switch error code
+      //are any errors recoverable from??
+    }
   }
 }
 
-port.on('data', receiveResponse);
+parser.on('data', parseGrbl);
 
 //object methods referencing 'this' means functions composed of them must bind them
 //to their parent object when passing them to the composition function
@@ -61,9 +63,11 @@ const grbl = {
     this.queued.push(cmd.length);
   },
   use: function () {
-    console.log('removed: ', this.queued[0]);    
-    this.free += this.queued.shift();
-    console.log('free: ', this.free);    
+    if (this.queued.length) {  
+      console.log('removed: ', this.queued[0]);        
+      this.free += this.queued.shift();
+      console.log('free: ', this.free);    
+    }
   }
 }
 
