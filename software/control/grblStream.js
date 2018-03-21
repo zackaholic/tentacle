@@ -1,8 +1,22 @@
 const SerialPort = require('serialport');
+const EventEmitter = require('events');
 const Readline = SerialPort.parsers.Readline;
 const port = new SerialPort('/dev/tty.usbserial-FTELMX61', {
   baudRate: 115200
 });
+
+class Emitter extends EventEmitter {};
+const streamer = new Emitter();
+
+const watcher = (emitter) => {
+  return (buff, threshold) => {
+    if (buff.length <= threshold) {
+      emitter.emit('bufferReady')
+    }
+  }
+}
+
+const watchBuffer = watcher(streamer);
 
 const parser = port.pipe(new Readline());
 
@@ -48,7 +62,10 @@ const commands = {
     fillGrblBuffer();
   },
   consume: function() {
-    return this.queue.pop();
+    const consumed = this.queue.pop();
+    console.log('Queue size: ', this.queue.length);
+    watchBuffer(this.queue, 20);
+    return consumed;
   }
 }
 
@@ -99,10 +116,9 @@ const fillGrblBuffer = () => {
     return;
   }
 }
-fillGrblBuffer();
 
-
-module.exports.send = (cmd) => {
+module.exports = streamer;
+streamer.buffer = (cmd) => {
   commands.add(cmd);
 }
 
