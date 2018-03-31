@@ -11,5 +11,8 @@
     "url": "https://github.com/zackaholic/tentacle.git"
   },
   "author": "Zack Lewis",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "i2c-bus": "^3.1.0"
+  }
 }
