@@ -13,6 +13,7 @@
   "author": "Zack Lewis",
   "license": "MIT",
   "dependencies": {
+    "adafruit-i2c-pwm-driver": "^0.2.1",
     "i2c-bus": "^3.1.0"
   }
 }
