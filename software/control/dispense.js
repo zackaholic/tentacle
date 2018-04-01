@@ -1,18 +1,24 @@
 const valves = require('./valve_control.js');
 const menu = require('./recipes.js');
 
-const scheduleValveOff = (valve, time) => {
-  setTimeout(() => {valves.close(valve)},time);
+const scheduleValve =  (delay, cb, num) => {
+  setTimeout(cb.bind(null, num), delay);
 }
 
-const dispenceSequential = () => {
+const dispenseSequential = (recipe) => {
+   let delay = 0;
+   recipe.forEach((time, i) => {
+     scheduleValve(delay, valves.open, i);
+     delay += time;
+     scheduleValve(delay, valves.close, i);
+  });
 }
 
 const dispenseSimultaneous = (recipe) => {
    recipe.forEach((time, i) => {
     if (time > 0) {
       valves.open(i);
-      scheduleValveOff(i, time)
+      scheduleValve(time, valves.close, i);
     }
   });
 }
