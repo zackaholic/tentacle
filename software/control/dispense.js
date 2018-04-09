@@ -1,5 +1,5 @@
 const valves = require('./valve_control.js');
-const menu = require('./recipes.js');
+//const menu = require('./recipes.js');
 
 const scheduleValve =  (delay, cb, num) => {
   setTimeout(cb.bind(null, num), delay);
@@ -22,6 +22,7 @@ const dispenseSimultaneous = (recipe) => {
     }
   });
 }
+/*
 if (process.argv[2]) {
   if (menu.list().includes(process.argv[2])) {
     dispenseSimultaneous(menu.recipe(process.argv[2]));
@@ -30,3 +31,8 @@ if (process.argv[2]) {
     console.log(`Options are: ${JSON.stringify(menu.list())}`);
   }
 }
+*/
+module.exports.dispenseSimultaneous = dispenseSimultaneous;
+module.exports.dispenseSequential = dispenseSequential;
+
+
