@@ -10,8 +10,8 @@ const streamer = new Emitter();
 
 const watcher = (emitter) => {
   return (buff, threshold) => {
-    if (buff.length <= threshold) {
-      emitter.emit('bufferReady')
+    if (buff.length === threshold) {
+      emitter.emit('bufferReady');
     }
   }
 }
@@ -59,7 +59,12 @@ const commands = {
   },
   add: function(cmd) {
     this.queue.unshift(cmd);
-    fillGrblBuffer();
+    //if streaming has stopped (or will stop after next response (a rare case??))
+    //kick things off again with a newline
+    if (grbl.free === 128) {
+      send('\n');
+    }
+//    fillGrblBuffer();
   },
   consume: function() {
     const consumed = this.queue.pop();
@@ -88,15 +93,13 @@ const grbl = {
   }
 }
 
-const send = (output) => {
-  return (cmd) => {
+const send = (cmd) => {
     console.log('sending: ', cmd);
-    output(cmd + '\n');
+    port.send(cmd + '\n');
   }
 }
 
-const sendGrbl = send(port.write.bind(port));
-const sendConsole = send(console.log);
+
 
 const consumer = (getCmd, send, track) => {
   return () => {
@@ -106,7 +109,7 @@ const consumer = (getCmd, send, track) => {
   }
 }
 
-const consumeCommand = consumer(commands.consume.bind(commands), sendGrbl, grbl.add.bind(grbl));
+const consumeCommand = consumer(commands.consume.bind(commands), send, grbl.add.bind(grbl));
 
 const fillGrblBuffer = () => {
   if (commands.next() && (commands.next().length < grbl.free)) {
@@ -121,18 +124,3 @@ module.exports = streamer;
 streamer.buffer = (cmd) => {
   commands.add(cmd);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
