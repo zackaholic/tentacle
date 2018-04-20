@@ -16,6 +16,5 @@ const savePosition = (pulse) => {
     setPosition.call(null, channel, pulse, pwmDriver.setPWM);
   }
 }
-
 module.exports.close = savePosition(400);
 module.exports.open = savePosition(500);
