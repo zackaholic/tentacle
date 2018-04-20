@@ -7,11 +7,12 @@ const port = new SerialPort('/dev/tty.usbserial-FTELMX61', {
 
 class Emitter extends EventEmitter {};
 const streamer = new Emitter();
+let lowBufferThreshold = 20;
 
 const watcher = (emitter) => {
   return (buff, threshold) => {
     if (buff.length === threshold) {
-      emitter.emit('bufferReady');
+      emitter.emit('buffer-low');
     }
   }
 }
@@ -61,15 +62,16 @@ const commands = {
     this.queue.unshift(cmd);
     //if streaming has stopped (or will stop after next response (a rare case??))
     //kick things off again with a newline
-    if (grbl.free === 128) {
+    //TODO: but only send once!
+    if (grbl.streaming === false) {
       send('\n');
+      grbl.streaming = true;
     }
-//    fillGrblBuffer();
   },
   consume: function() {
     const consumed = this.queue.pop();
-    console.log('Queue size: ', this.queue.length);
-    watchBuffer(this.queue, 20);
+    //console.log('Buffer size: ', this.queue.length);
+    watchBuffer(this.queue, lowBufferThreshold);
     return consumed;
   }
 }
@@ -78,28 +80,34 @@ const grbl = {
   len: 128,
   queued: [],
   free: 128,
+  streaming: false,
+
   add: function (cmd) {
-    console.log('added: ', cmd.length);
+    //console.log(`added: ${cmd} (${cmd.length})`);
     this.free -= cmd.length;
-    console.log('free: ', this.free);    
-    this.queued.push(cmd.length);
+    //console.log('grbl free: ', this.free);    
+    this.queued.push(cmd);
   },
   use: function () {
+    //console.log(`use called and grbl queue has ${this.queued.length} elements`);
+
     if (this.queued.length) {  
-      console.log('removed: ', this.queued[0]);        
-      this.free += this.queued.shift();
-      console.log('free: ', this.free);    
+      //console.log('removed: ', this.queued[0]);        
+      this.free += this.queued.shift().length;
+      //console.log('free: ', this.free);    
+      if (this.free === 128) {
+        //last command in queue has been parsed!
+        streamer.emit('grbl-empty');
+        this.streaming = false;
+      }
     }
   }
 }
 
 const send = (cmd) => {
-    console.log('sending: ', cmd);
-    port.send(cmd + '\n');
-  }
+  console.log('sending: ', cmd);
+  port.write(cmd + '\n');
 }
-
-
 
 const consumer = (getCmd, send, track) => {
   return () => {
@@ -124,3 +132,6 @@ module.exports = streamer;
 streamer.buffer = (cmd) => {
   commands.add(cmd);
 }
+streamer.setThreshold = (thresh) => {
+  lowBufferThreshold = thresh
+};
