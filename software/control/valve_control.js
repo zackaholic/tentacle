@@ -11,10 +11,10 @@ const setPosition = (channel, pulseDuration, setFunction) => {
   setFunction(channel, 0,  pulseDuration);
 }
 
-const savePosition = (pulse) => {
+const writePosition = (pulse) => {
   return (channel) => {
     setPosition.call(null, channel, pulse, pwmDriver.setPWM);
   }
 }
-module.exports.close = savePosition(400);
-module.exports.open = savePosition(500);
+module.exports.close = writePosition(400);
+module.exports.open = writePosition(500);

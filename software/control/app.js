@@ -1,18 +1,27 @@
 const menu = require('./recipes.js');
 const dispense = require('./dispense.js');
 const input = require('./interface.js');
-const move = require('./mover.js');
+const mover = require('./mover.js');
+const logger = require('tracer').console();
 
-const dispenser = (dispense, move, drink) => {
+const dispenser = (dispenseFunc, moveFunc) => {
+  return (recipe) => {
     return () => {
-      console.log('dispensing ', drink);
-      move();
-      //somehow handle the move delay here
-      dispense(drink);
+      logger.log('dispense call');
+      moveFunc();
+      mover.once('move-complete', () => {
+        logger.log('move complete event, dispensing ', recipe);
+        dispenseFunc(recipe);
+      });
+      dispense.once('dispense-complete', () => {
+        logger.log('dispense complete event, attract call');
+        mover.attract();
+      });
+    }
   }
 }
 
-const dispenseDrink = dispenser.bind(null, dispense.dispenseSimultaneous, move.moveDispense);
+const dispenseDrink = dispenser(dispense.dispenseSequential, mover.dispense);
 
 input.assign([
   dispenseDrink(menu.recipe(menu.list()[0])),
@@ -21,4 +30,9 @@ input.assign([
   dispenseDrink(menu.recipe(menu.list()[3]))
 ]);
 
-move.moveRandom();
+const start = () => {
+  mover.setSpeed(100);
+  mover.attract();
+}
+
+mover.on('ready', start);

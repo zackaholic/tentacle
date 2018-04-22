@@ -1,13 +1,17 @@
 const SerialPort = require('serialport');
 const EventEmitter = require('events');
+const logger = require('tracer').console();
+
 const Readline = SerialPort.parsers.Readline;
-const port = new SerialPort('/dev/tty.usbserial-FTELMX61', {
+const port = new SerialPort('/dev/serial0', {
   baudRate: 115200
 });
 
+const parser = port.pipe(new Readline({delimiter: '\r\n'}));
+
 class Emitter extends EventEmitter {};
 const streamer = new Emitter();
-let lowBufferThreshold = 20;
+let lowBufferThreshold = 10;
 
 const watcher = (emitter) => {
   return (buff, threshold) => {
@@ -19,18 +23,18 @@ const watcher = (emitter) => {
 
 const watchBuffer = watcher(streamer);
 
-const parser = port.pipe(new Readline());
+const appendNewline = (s) => `${s}\n`;
 
 port.on('error', err => {
-  console.log('Error: ', err.message);
+  logger.log('Error: ', err.message);
 });
 
 port.on('open', () => {
-  //do nothing
+  streamer.emit('port-open');
 });
 
 const parseGrbl = (res) => {
-  console.log('Got: ', res);
+  logger.log('Got: ', res);
   res = res.toString('utf8');
 //TODO: why does only includes() work for this comparison???  
   if (res.includes('ok')) {
@@ -64,38 +68,38 @@ const commands = {
     //kick things off again with a newline
     //TODO: but only send once!
     if (grbl.streaming === false) {
-      send('\n');
+      send(appendNewline(''));
       grbl.streaming = true;
     }
   },
   consume: function() {
     const consumed = this.queue.pop();
-    //console.log('Buffer size: ', this.queue.length);
+    //logger.log('Buffer size: ', this.queue.length);
     watchBuffer(this.queue, lowBufferThreshold);
     return consumed;
   }
 }
 
 const grbl = {
-  len: 128,
+  len: 127,
   queued: [],
-  free: 128,
+  free: 127,
   streaming: false,
 
   add: function (cmd) {
-    //console.log(`added: ${cmd} (${cmd.length})`);
+    //logger.log(`added: ${cmd} (${cmd.length})`);
     this.free -= cmd.length;
-    //console.log('grbl free: ', this.free);    
+    //logger.log('grbl free: ', this.free);    
     this.queued.push(cmd);
   },
   use: function () {
-    //console.log(`use called and grbl queue has ${this.queued.length} elements`);
+    //logger.log(`use called and grbl queue has ${this.queued.length} elements`);
 
     if (this.queued.length) {  
-      //console.log('removed: ', this.queued[0]);        
+      logger.log('removed: ', this.queued[0]);        
       this.free += this.queued.shift().length;
-      //console.log('free: ', this.free);    
-      if (this.free === 128) {
+      logger.log('free: ', this.free);    
+      if (this.free === this.len) {
         //last command in queue has been parsed!
         streamer.emit('grbl-empty');
         this.streaming = false;
@@ -103,10 +107,14 @@ const grbl = {
     }
   }
 }
+const viewBytes = (s) => {
+  return s.slice().split('').map((e) => {return e.charCodeAt(0)});
+}
 
 const send = (cmd) => {
-  console.log('sending: ', cmd);
-  port.write(cmd + '\n');
+  
+  logger.log(`sending: ${cmd}`);
+  port.write(cmd);
 }
 
 const consumer = (getCmd, send, track) => {
@@ -130,7 +138,7 @@ const fillGrblBuffer = () => {
 
 module.exports = streamer;
 streamer.buffer = (cmd) => {
-  commands.add(cmd);
+  commands.add(appendNewline(cmd));
 }
 streamer.setThreshold = (thresh) => {
   lowBufferThreshold = thresh

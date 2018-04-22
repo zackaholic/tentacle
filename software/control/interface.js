@@ -9,8 +9,10 @@ buttons = [
 ];
 
 process.on('SIGINT', () => {
-  button1.unexport();
-  button2.unexport();
+  buttons[0].unexport();
+  buttons[1].unexport();
+  buttons[2].unexport();
+  buttons[3].unexport();
   console.log('buttons detached');
 });
 
