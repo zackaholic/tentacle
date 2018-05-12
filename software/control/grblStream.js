@@ -1,13 +1,14 @@
+'use strict';
 const SerialPort = require('serialport');
 const EventEmitter = require('events');
-const logger = require('tracer').console();
 
 const Readline = SerialPort.parsers.Readline;
 const port = new SerialPort('/dev/serial0', {
-  baudRate: 115200
+  baudRate: 115200,
 });
 
-const parser = port.pipe(new Readline({delimiter: '\r\n'}));
+const parser = port.pipe(new Readline('\n'));
+
 
 class Emitter extends EventEmitter {};
 const streamer = new Emitter();
@@ -23,10 +24,35 @@ const watcher = (emitter) => {
 
 const watchBuffer = watcher(streamer);
 
+const parseGrblStatus = (res) => {
+  if (!res.startsWith('<')) {
+    return undefined;
+  }
+  const status = res.match(/^<(\w+)\|WPos:(-?\d+\.\d+),(-?\d+\.\d+),(-?\d+\.\d+)/);
+  return {state: status[1], x: status[2], y: status[3]};
+}
+
+const getStatus = () => {
+  return new Promise((resolve, reject) => {
+    const getStatusTimeout = setTimeout(() => {
+      reject('get status timeout');
+    }, 2000);
+    let status;
+    parser.on('data', function getState (data) {
+      if (status = parseGrblStatus(data)) {
+        clearTimeout(getStatusTimeout);
+        parser.removeListener('data', getState);
+        resolve(status);
+      }
+    });
+    port.write('?');
+  });
+}
+
 const appendNewline = (s) => `${s}\n`;
 
 port.on('error', err => {
-  logger.log('Error: ', err.message);
+  console.log('Error: ', err.message);
 });
 
 port.on('open', () => {
@@ -34,17 +60,15 @@ port.on('open', () => {
 });
 
 const parseGrbl = (res) => {
-  logger.log('Got: ', res);
+  console.log('Got: ', res);
   res = res.toString('utf8');
-//TODO: why does only includes() work for this comparison???  
   if (res.includes('ok')) {
     grbl.use();
     fillGrblBuffer();    
-  } else {
-    if (res.includes('error')) {
-      //switch error code
-      //are any errors recoverable from??
-    }
+  }else if (res.includes('Grbl')) {
+   streamer.emit('first-contact'); 
+  }else if (res.includes('error')) {
+      //switch error code?
   }
 }
 
@@ -63,18 +87,21 @@ const commands = {
     }
   },
   add: function(cmd) {
+    if (cmd.charAt(cmd.length -1) !== '\n') {
+      cmd += '\n';
+    }
     this.queue.unshift(cmd);
     //if streaming has stopped (or will stop after next response (a rare case??))
     //kick things off again with a newline
     //TODO: but only send once!
     if (grbl.streaming === false) {
-      send(appendNewline(''));
+      send('\n');
       grbl.streaming = true;
     }
   },
   consume: function() {
     const consumed = this.queue.pop();
-    //logger.log('Buffer size: ', this.queue.length);
+    //console.log('Buffer size: ', this.queue.length);
     watchBuffer(this.queue, lowBufferThreshold);
     return consumed;
   }
@@ -87,18 +114,18 @@ const grbl = {
   streaming: false,
 
   add: function (cmd) {
-    //logger.log(`added: ${cmd} (${cmd.length})`);
+//    console.log(`added: ${cmd} (${cmd.length})`);
     this.free -= cmd.length;
-    //logger.log('grbl free: ', this.free);    
+//    console.log('grbl free: ', this.free);    
     this.queued.push(cmd);
   },
   use: function () {
-    //logger.log(`use called and grbl queue has ${this.queued.length} elements`);
+    //console.log(`use called and grbl queue has ${this.queued.length} elements`);
 
     if (this.queued.length) {  
-      logger.log('removed: ', this.queued[0]);        
+//      console.log(`removed: ${this.queued[0]} (${this.queued[0].length})`);        
       this.free += this.queued.shift().length;
-      logger.log('free: ', this.free);    
+//      console.log('free: ', this.free);    
       if (this.free === this.len) {
         //last command in queue has been parsed!
         streamer.emit('grbl-empty');
@@ -112,8 +139,7 @@ const viewBytes = (s) => {
 }
 
 const send = (cmd) => {
-  
-  logger.log(`sending: ${cmd}`);
+  console.log(`sending: ${cmd}`);
   port.write(cmd);
 }
 
@@ -138,8 +164,9 @@ const fillGrblBuffer = () => {
 
 module.exports = streamer;
 streamer.buffer = (cmd) => {
-  commands.add(appendNewline(cmd));
+  commands.add(cmd);
 }
 streamer.setThreshold = (thresh) => {
   lowBufferThreshold = thresh
 };
+streamer.getGrblStatus = getStatus;

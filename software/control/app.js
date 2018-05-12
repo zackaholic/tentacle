@@ -4,6 +4,26 @@ const input = require('./interface.js');
 const mover = require('./mover.js');
 const logger = require('tracer').console();
 
+const dispenserP = (dispenseFunc, moveFunc) => {
+  return (recipe) => {
+    return () => {
+      logger.log(`moving to dispense ${recipe}`);
+      moveFunc()
+      .then(() => {
+        logger.log('beginning pour');
+        return dispenseFunc(recipe);
+      })
+      .then(() => {
+        logger.log('dispense complete, attract call');
+        mover.attract();
+      })
+      .catch((err) => {
+        logger.log(err);
+      });
+    }
+  }
+}
+
 const dispenser = (dispenseFunc, moveFunc) => {
   return (recipe) => {
     return () => {
@@ -21,7 +41,7 @@ const dispenser = (dispenseFunc, moveFunc) => {
   }
 }
 
-const dispenseDrink = dispenser(dispense.dispenseSequential, mover.dispense);
+const dispenseDrink = dispenserP(dispense.dispenseSequentialP, mover.dispenseP);
 
 input.assign([
   dispenseDrink(menu.recipe(menu.list()[0])),
@@ -31,8 +51,13 @@ input.assign([
 ]);
 
 const start = () => {
-  mover.setSpeed(100);
+  mover.setSpeed(10000);
   mover.attract();
-}
+  setTimeout(() => {
+    dispenseDrink(menu.recipe(menu.list()[2]))();
+}, 1000);
 
+}
 mover.on('ready', start);
+
+
