@@ -2,10 +2,10 @@ const Gpio = require('onoff').Gpio;
 const dispense = require('./dispense.js');
 
 buttons = [
-  (new Gpio(17, 'in', 'falling', {debounceTimeout: 10})),
-  (new Gpio(27, 'in', 'falling', {debounceTimeout: 10})),
-  (new Gpio(22, 'in', 'falling', {debounceTimeout: 10})),
-  (new Gpio(10, 'in', 'falling', {debounceTimeout: 10}))
+  (new Gpio(17, 'in', 'falling', {debounceTimeout: 20})),
+  (new Gpio(27, 'in', 'falling', {debounceTimeout: 20})),
+  (new Gpio(22, 'in', 'falling', {debounceTimeout: 20})),
+  (new Gpio(10, 'in', 'falling', {debounceTimeout: 20}))
 ];
 
 process.on('SIGINT', () => {
