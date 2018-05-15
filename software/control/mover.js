@@ -96,7 +96,7 @@ const alertOnPosition = (position) => {
   });
 }
 
-mover.dispenseP = () => {
+mover.dispense = () => {
  return new Promise((resolve, reject) => {
     stream.removeListener('buffer-low', sendSomeMoves);
     stream.buffer(moveTo(dispensePosition));
@@ -112,15 +112,5 @@ mover.dispenseP = () => {
     }, 120000); //how long do you wait before your drink starts pouring without getting anxious? 5sec max?
   });
 }
-
-mover.dispense = () => {
-  stream.removeListener('buffer-low', sendSomeMoves);
-  //stream.on or stream.once or does it really even matter what's the point anyway?
-  stream.once('grbl-empty', () => {
-    logger.log('\ngrbl-empty event\n');
-    mover.emit('move-complete');
-  });
-  stream.buffer(moveTo(dispensePosition));
-};
 
 module.exports = mover;

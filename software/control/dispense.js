@@ -10,7 +10,7 @@ const scheduleValve =  (delay, cb, num) => {
   setTimeout(cb.bind(null, num), delay);
 }
 
-dispenser.dispenseSequentialP = (recipe) => {
+dispenser.dispenseSequential = (recipe) => {
   return new Promise((resolve, reject) => {
     let delay = 0;
     recipe.forEach((time, i) => {
@@ -25,7 +25,7 @@ dispenser.dispenseSequentialP = (recipe) => {
   });
 }
 
-dispenser.dispenseSimultaneousP = (recipe) => {
+dispenser.dispenseSimultaneous = (recipe) => {
   return new Promise((resolve, reject) => {
     let longest = 0;
      recipe.forEach((time, i) => {

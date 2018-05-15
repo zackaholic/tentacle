@@ -6,10 +6,10 @@ const LED = require('./led_control.js');
 const Gpio = require('onoff').Gpio;
 
 const buttons = [
- new Gpio(17, 'in', 'falling', {debounceTimeout: 20}),
- new Gpio(27, 'in', 'falling', {debounceTimeout: 20}),
- new Gpio(22, 'in', 'falling', {debounceTimeout: 20}),
- new Gpio(10, 'in', 'falling', {debounceTimeout: 20})
+ new Gpio(17, 'in', 'falling', {debounceTimeout: 10}),
+ new Gpio(27, 'in', 'falling', {debounceTimeout: 10}),
+ new Gpio(22, 'in', 'falling', {debounceTimeout: 10}),
+ new Gpio(10, 'in', 'falling', {debounceTimeout: 10})
 ];
 
 const LEDs = [
@@ -61,7 +61,7 @@ const dispenser = (dispenseFunc, moveFunc) => {
         logger.log('dispense complete, attract call');
         indicator.stopFlash();
         indicator.on();
-//        mover.attract();
+        mover.attract();
         watchButtons();
       })
       .catch((err) => {
@@ -71,7 +71,7 @@ const dispenser = (dispenseFunc, moveFunc) => {
   }
 }
 
-const dispenseDrink = dispenser(dispense.dispenseSequentialP, mover.dispenseP);
+const dispenseDrink = dispenser(dispense.dispenseSequential, mover.dispense)
 
 
 const watchButtons = ((buttons, dispenseFn, menu, LEDs) => {
@@ -94,7 +94,7 @@ const start = () => {
   LEDsOn(LEDs);
   watchButtons();
   mover.setSpeed(10000);
-//  mover.attract();
+  mover.attract();
 }
 mover.on('ready', start);
 

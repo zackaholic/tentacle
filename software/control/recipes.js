@@ -2,10 +2,10 @@
 
 const menu = {
 
-  "whiskey-soda": [4000, 6000, 0, 0],
-  "tequila-soda": [0, 6000, 4000, 0],
-  "suicide":      [2500, 2500, 2500, 2500],
-  "kid-special":  [0, 5000, 0, 5000]
+  "whiskey-soda": [2000, 0, 4000, 0],
+  "tequila-soda": [3000, 3000, 0, 0],
+  "suicide":      [1000, 1000, 1000, 1000],
+  "kid-special":  [4000, 0, 0, 2000]
 }
 
 module.exports.list = function() {

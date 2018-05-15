@@ -16,6 +16,17 @@ process.on('SIGINT', () => {
   console.log('buttons detached');
 });
 
+const buttonCallbacks = {
+  cb1: undefined,
+  cb2: undefined,
+  cb3: undefined,
+  cb4: undefined
+};
+
+//TODO: move listener assignments to named functions, remove listener as first
+//act of listener, reinstate when dispensing is done.
+//So, move all the button stuff to main app?
+/*
 module.exports.assign = (buttonMap) => {
   for (let i = 0; i < 4; i++) {
     buttons[i].watch((err, val) => {
@@ -26,3 +37,4 @@ module.exports.assign = (buttonMap) => {
     });
   }
 }
+*/
