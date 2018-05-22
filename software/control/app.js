@@ -12,6 +12,25 @@ const buttons = [
  new Gpio(10, 'in', 'falling', {debounceTimeout: 10})
 ];
 
+const cupSensor = new Gpio(11, 'in', 'falling', {debounceTimeout: 20});
+
+const cupPresent = ((sensor) => {
+  return () => {
+    return new Promise((resolve, reject) => {
+      sensor.read((err, val) => {
+        if (err) {
+          reject(err);
+        }
+        if (val === 0) {
+          resolve(0);
+        } else {
+          reject('cup not detected');
+        };
+      });
+    });
+  }
+})(cupSensor);
+
 const LEDs = [
  new LED(4),
  new LED(5),
@@ -37,22 +56,27 @@ process.on('SIGINT', () => {
   buttons[1].unexport();
   buttons[2].unexport();
   buttons[3].unexport();
-  
+
+  cupSensor.unexport();
+
   LEDsOff(LEDs);
 
   console.log('\nbuttons detached, LEDs off');
 });
 
-const dispenser = (dispenseFunc, moveFunc) => {
+const dispenser = (dispenseFunc, moveFunc, senseFunc) => {
   return (recipe, indicator) => {
     return (err) => {
       if (err) {
         return console.log(err);
       }
-      logger.log(`moving to dispense ${recipe}`);
-      indicator.flash(2);
       unwatchButtons();
-      moveFunc()
+      cupPresent()
+      .then(() => {
+        logger.log(`moving to dispense ${recipe}`);
+        indicator.flash(2);
+        return moveFunc();
+      })
       .then(() => {
         logger.log('beginning pour');
         return dispenseFunc(menu.recipe(recipe));
@@ -65,13 +89,19 @@ const dispenser = (dispenseFunc, moveFunc) => {
         watchButtons();
       })
       .catch((err) => {
+        //something went wrong, reset to attract mode
         logger.log(err);
+        indicator.stopFlash();
+        indicator.on();
+        mover.attract();
+        watchButtons();
       });
     }
   }
 }
 
 const dispenseDrink = dispenser(dispense.dispenseSequential, mover.dispense)
+
 
 
 const watchButtons = ((buttons, dispenseFn, menu, LEDs) => {

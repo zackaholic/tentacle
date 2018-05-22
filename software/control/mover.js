@@ -58,7 +58,9 @@ mover.setSpeed = (f) => {
 mover.attract = () => {
   //kick things off
   sendSomeMoves();
-  stream.on('buffer-low', sendSomeMoves);
+  if (stream.listenerCount('buffer-low') === 0) {
+    stream.on('buffer-low', sendSomeMoves);
+  }
 };
 
 const closeEnough = (val1, val2, error) => {
