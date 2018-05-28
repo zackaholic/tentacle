@@ -4,6 +4,7 @@ const mover = require('./mover.js');
 const logger = require('tracer').console();
 const LED = require('./led_control.js');
 const Gpio = require('onoff').Gpio;
+const valves = require('./valve_control');
 
 const buttons = [
  new Gpio(17, 'in', 'falling', {debounceTimeout: 10}),
@@ -58,6 +59,11 @@ process.on('SIGINT', () => {
   buttons[3].unexport();
 
   cupSensor.unexport();
+  //open pinch valves on power down to preserve tubing
+  valves.open(0);
+  valves.open(1);
+  valves.open(2);
+  valves.open(3);
 
   LEDsOff(LEDs);
 

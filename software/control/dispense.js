@@ -42,6 +42,10 @@ dispenser.dispenseSimultaneous = (recipe) => {
   });
 }
 
+valves.close(0);
+valves.close(1);
+valves.close(2);
+valves.close(3);
 
 module.exports = dispenser;
 
