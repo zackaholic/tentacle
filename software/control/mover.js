@@ -11,7 +11,7 @@ stream.setThreshold(5);
 
 class Emitter extends EventEmitter {};
 const mover = new Emitter();
-const dispensePosition = {x: 40, y: 0};
+const dispensePosition = {x: 0, y: -65};
 
 const trim = (precision) => {
   return (val) => {
@@ -33,13 +33,9 @@ const valueAtCoord = (x, y, width, arr) => {
   return arr[x + y * width];
 }
 
-// const testMove = () => {
-//   return `G1X${trim4(Math.random() * 20 - 10)}Y${trim4(Math.random() * 20 - 10)}`;
-// }
-
-// const moveTo = (coordinate) => {
-//   return `G1X${coordinate.x}Y${coordinate.y}`;
-// }
+const moveTo = (coordinate) => {
+  return `G1X${coordinate.x}Y${coordinate.y}`;
+}
 
 const sendSomeMoves = () => {
   logger.log('sending moves');
@@ -56,7 +52,7 @@ const location = (() => {
   const mod = {};
   const currentLocation = {x: 0, y: 0};
   const offsets = {x: 1, y: 50};
-  let scale = 80;
+  let scale = 53;
 
   mod.moveDist = (amt) => {
     offsets.x += amt;
@@ -66,7 +62,7 @@ const location = (() => {
     const destY = noise2D(0.04, offsets.y, 1, 1) * scale;
     currentLocation.x = destX;
     currentLocation.y = destY;
-    return(`G1${gcodePoint(destX, destY)}F${100 * amt * 1000}`);    
+    return(`G1${gcodePoint(trim4(destX), trim4(destY))}F${trim4(1000 + amt * 2000)}`);    
   };
   
   mod.current = () => {
@@ -78,7 +74,7 @@ const location = (() => {
 
 const mood = (() => {
   const mod = {};
-  const size = 160;
+  const size = 106;
   const scalar = 0.04;
   let offset = 1;
   const offsetShift = 0.005;
@@ -174,9 +170,10 @@ const alertOnPosition = (position) => {
   });
 }
 
-mover.dispenseP = () => {
+mover.dispense = () => {
  return new Promise((resolve, reject) => {
     stream.removeListener('buffer-low', sendSomeMoves);
+    stream.buffer('F3000');
     stream.buffer(moveTo(dispensePosition));
     alertOnPosition(dispensePosition).then(() => {
       clearTimeout(dispenseTimeout);
@@ -187,18 +184,8 @@ mover.dispenseP = () => {
     });
     const dispenseTimeout = setTimeout(() => {
       reject('dispense move timeout');
-    }, 120000); //how long do you wait before your drink starts pouring without getting anxious? 5sec max?
+    }, 30000); //how long do you wait before your drink starts pouring without getting anxious? 5sec max?
   });
 }
-
-mover.dispense = () => {
-  stream.removeListener('buffer-low', sendSomeMoves);
-  //stream.on or stream.once or does it really even matter what's the point anyway?
-  stream.once('grbl-empty', () => {
-    logger.log('\ngrbl-empty event\n');
-    mover.emit('move-complete');
-  });
-  stream.buffer(moveTo(dispensePosition));
-};
 
 module.exports = mover;
