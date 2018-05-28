@@ -1,6 +1,9 @@
 const stream = require('./grblStream.js');
 const EventEmitter = require('events');
 const logger = require('tracer').console();
+const Noise = require('toxiclibsjs/math/noise');
+
+const simplex = Noise.simplexNoise;
 
 //set this val here since it directly impacts how many commands are sent at
 //a time?
@@ -18,20 +21,95 @@ const trim = (precision) => {
 
 const trim4 = trim(4);
 
-const testMove = () => {
-  return `G1X${trim4(Math.random() * 20 - 10)}Y${trim4(Math.random() * 20 - 10)}`;
+const gcodePoint = (x, y) => {
+ return `X${x}Y${y}`;
 }
 
-const moveTo = (coordinate) => {
-  return `G1X${coordinate.x}Y${coordinate.y}`;
+const noise2D = (scalar, offset, x, y) => {
+  return simplex.noise( x * scalar + offset, y * scalar );
 }
+
+const valueAtCoord = (x, y, width, arr) => {
+  return arr[x + y * width];
+}
+
+// const testMove = () => {
+//   return `G1X${trim4(Math.random() * 20 - 10)}Y${trim4(Math.random() * 20 - 10)}`;
+// }
+
+// const moveTo = (coordinate) => {
+//   return `G1X${coordinate.x}Y${coordinate.y}`;
+// }
 
 const sendSomeMoves = () => {
   logger.log('sending moves');
-  for (let i = 0; i < 6; i++) {
-    stream.buffer(testMove());
+  let excitation;
+  let moveCmd;
+  for (let i = 0; i < 20; i++) {
+    excitation = mood.getMood(location.current().x, location.current().y);
+    moveCmd = location.moveDist(excitation * 0.05);
+    stream.buffer(moveCmd);
   }
 }
+
+const location = (() => {
+  const mod = {};
+  const currentLocation = {x: 0, y: 0};
+  const offsets = {x: 1, y: 50};
+  let scale = 80;
+
+  mod.moveDist = (amt) => {
+    offsets.x += amt;
+    offsets.y += amt;
+//    scale = amt * 160;
+    const destX = noise2D(0.04, offsets.x, 1, 1) * scale;
+    const destY = noise2D(0.04, offsets.y, 1, 1) * scale;
+    currentLocation.x = destX;
+    currentLocation.y = destY;
+    return(`G1${gcodePoint(destX, destY)}F${100 * amt * 1000}`);    
+  };
+  
+  mod.current = () => {
+    return currentLocation;
+  }
+
+  return mod;
+})();
+
+const mood = (() => {
+  const mod = {};
+  const size = 160;
+  const scalar = 0.04;
+  let offset = 1;
+  const offsetShift = 0.005;
+  let backgroundMood = [];
+  
+  const createMoodMap = (scalar, width, height, offset) => {
+    const map = [];
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < height; y++) {
+        const noiseVal = noise2D(scalar, offset, x, y, );
+        const c = ((noiseVal + 1) / 2);
+        map[x + y * width] = c;             
+      }
+    }
+    return map;
+  }
+
+  backgroundMood = createMoodMap(scalar, size, size, offset);
+  
+  mod.getMood = (x, y) => {
+    const value = valueAtCoord(Math.floor(x) + size / 2, Math.floor(y) + size / 2, size, backgroundMood);
+    return value;
+  }
+
+  setInterval(() => {
+    offset += offsetShift;
+    backgroundMood = createMoodMap(scalar, size, size, offset)
+  }, 10000);
+
+  return mod;
+})();
 
 mover.getPosition = () => {
   return new Promise((resolve, reject) => {
@@ -58,9 +136,7 @@ mover.setSpeed = (f) => {
 mover.attract = () => {
   //kick things off
   sendSomeMoves();
-  if (stream.listenerCount('buffer-low') === 0) {
-    stream.on('buffer-low', sendSomeMoves);
-  }
+  stream.on('buffer-low', sendSomeMoves);
 };
 
 const closeEnough = (val1, val2, error) => {
@@ -98,7 +174,7 @@ const alertOnPosition = (position) => {
   });
 }
 
-mover.dispense = () => {
+mover.dispenseP = () => {
  return new Promise((resolve, reject) => {
     stream.removeListener('buffer-low', sendSomeMoves);
     stream.buffer(moveTo(dispensePosition));
@@ -114,5 +190,15 @@ mover.dispense = () => {
     }, 120000); //how long do you wait before your drink starts pouring without getting anxious? 5sec max?
   });
 }
+
+mover.dispense = () => {
+  stream.removeListener('buffer-low', sendSomeMoves);
+  //stream.on or stream.once or does it really even matter what's the point anyway?
+  stream.once('grbl-empty', () => {
+    logger.log('\ngrbl-empty event\n');
+    mover.emit('move-complete');
+  });
+  stream.buffer(moveTo(dispensePosition));
+};
 
 module.exports = mover;
