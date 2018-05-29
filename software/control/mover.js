@@ -62,7 +62,7 @@ const location = (() => {
     const destY = noise2D(0.04, offsets.y, 1, 1) * scale;
     currentLocation.x = destX;
     currentLocation.y = destY;
-    console.log('\n' + amt + '\n');
+//    console.log('\n' + amt + '\n');
     return(`G1${gcodePoint(trim4(destX), trim4(destY))}F${trim4(1000 + amt * 50000)}`);    
   };
   
@@ -133,6 +133,7 @@ mover.setSpeed = (f) => {
 mover.attract = () => {
   //kick things off
   sendSomeMoves();
+  stream.removeAllListeners('buffer-low');
   stream.on('buffer-low', sendSomeMoves);
 };
 
