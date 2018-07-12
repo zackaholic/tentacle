@@ -11,7 +11,7 @@ stream.setThreshold(5);
 
 class Emitter extends EventEmitter {};
 const mover = new Emitter();
-const dispensePosition = {x: 0, y: -65};
+const dispensePosition = {x: 0, y: -77};
 
 const trim = (precision) => {
   return (val) => {

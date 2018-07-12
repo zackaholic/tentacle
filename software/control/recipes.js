@@ -1,11 +1,11 @@
 //ingreds:  whiskey soda  tequila juice
-
+// 4000ms pour at between 5 and 7.5psi equals 1oz plus a tiny bit
 const menu = {
 
-  "whiskey-soda": [2000, 0, 4000, 0],
-  "tequila-soda": [3000, 3000, 0, 0],
-  "suicide":      [1000, 1000, 1000, 1000],
-  "kid-special":  [4000, 0, 0, 2000]
+  "button4": [0, 0, 0, 0],
+  "button3": [0, 0, 0, 0],
+  "button2": [0, 16000, 0, 0],
+  "button1": [4000, 16000, 0, 0]
 }
 
 module.exports.list = function() {

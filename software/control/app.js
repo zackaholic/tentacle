@@ -60,11 +60,13 @@ process.on('SIGINT', () => {
 
   cupSensor.unexport();
   //open pinch valves on power down to preserve tubing
+  //but also this a terrible idea
+  /*
   valves.open(0);
   valves.open(1);
   valves.open(2);
   valves.open(3);
-
+*/
   LEDsOff(LEDs);
 
   console.log('\nbuttons detached, LEDs off');
